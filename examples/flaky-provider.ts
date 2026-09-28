@@ -1,8 +1,3 @@
-/**
- * Demo (`npm run demo`): four invoices against a provider that succeeds, times
- * out, rejects permanently, and applies a charge then drops the connection.
- */
-
 import { OperationQueue, PermanentFailure } from '../src/index.js';
 
 const charged = new Set<string>();
@@ -19,7 +14,6 @@ let timeouts = 0;
 queue.register('charge', async (payload, ctx) => {
   const { invoice } = payload as { invoice: string };
 
-  // On a retry, check first so an already-applied charge reports `noop`.
   if (ctx.attemptNumber > 1 && charged.has(invoice)) {
     return { outcome: 'noop', detail: 'provider already had it' };
   }
@@ -36,7 +30,6 @@ queue.register('charge', async (payload, ctx) => {
   charged.add(invoice);
 
   if (invoice === 'INV-004' && ctx.attemptNumber === 1) {
-    // Applied on their side, lost on ours. The next attempt will see it.
     throw new Error('connection reset after the charge landed');
   }
 
@@ -47,7 +40,6 @@ for (const invoice of ['INV-001', 'INV-002', 'INV-003', 'INV-004']) {
   queue.submit({ idempotencyKey: invoice, kind: 'charge', payload: { invoice }, maxAttempts: 5 });
 }
 
-// A caller retrying a timed-out submit must not create a second charge.
 const again = queue.submit({
   idempotencyKey: 'INV-001', kind: 'charge', payload: { invoice: 'INV-001' },
 });

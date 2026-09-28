@@ -66,7 +66,6 @@ describe('execution', () => {
   });
 
   it('distinguishes noop from applied and still settles as done', async () => {
-    // The crash window: the effect landed but our row was never updated.
     const { queue } = setup();
     queue.register('folder', async () => ({ outcome: 'noop', detail: 'already existed' }));
     const { operation } = queue.submit({ idempotencyKey: 'f-1', kind: 'folder' });
@@ -106,7 +105,7 @@ describe('retry and backoff', () => {
     await queue.runOnce();
     expect(calls).toBe(1);
 
-    await queue.runOnce(); // still inside the backoff window
+    await queue.runOnce();
     expect(calls).toBe(1);
 
     advance(1_000);
@@ -231,7 +230,6 @@ describe('expiry', () => {
 
 describe('leases', () => {
   it('reclaims work from a worker that died mid-flight', async () => {
-    // Simulates a crash by claiming and never settling, leaving the row leased.
     const { queue, advance } = setup({ leaseMs: 10_000 });
     let calls = 0;
     let hang = true;
@@ -256,7 +254,6 @@ describe('leases', () => {
 
 describe('converge', () => {
   it('settles an operation the provider already completed', async () => {
-    // Torn write: our record says failed, the provider says done.
     const { queue, advance } = setup();
     queue.register('folder', async () => {
       throw new PermanentFailure('connection reset after the write landed');
@@ -326,7 +323,6 @@ describe('regressions', () => {
     const op = queue.get('charge', 'x')!;
     expect(op.status).toBe('failed');
     expect(op.lastError).toMatch(/invalid outcome/);
-    // Permanent: no retry.
     expect(queue.attemptsOf(operation.id)).toHaveLength(1);
   });
 });

@@ -1,9 +1,3 @@
-/**
- * Every guarantee rests on the unique index on (kind, idempotency_key): the
- * database refuses duplicates, because an application-level check-then-insert
- * races under concurrent submits.
- */
-
 import type { Database } from 'better-sqlite3';
 
 export const SCHEMA = `
@@ -48,9 +42,7 @@ CREATE INDEX IF NOT EXISTS attempts_by_operation
 `;
 
 export function migrate(db: Database): void {
-  // WAL lets readers inspect the queue while workers write.
   db.pragma('journal_mode = WAL');
-  // SQLite does not enforce ON DELETE CASCADE unless foreign keys are enabled.
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
 }
